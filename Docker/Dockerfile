@@ -1,5 +1,5 @@
-ARG CUDA_VERSION
-ARG NVIDIA_VERSION
+ARG CUDA_VERSION=11.4.3
+ARG NVIDIA_VERSION=535.161.08
 
 FROM nvidia/cuda:$CUDA_VERSION-devel-ubuntu18.04
 
@@ -17,7 +17,7 @@ ENV PATH=${CONDA_DIR}/bin:$PATH
 
 # RUN git clone https://github.com/EmbodiedBench/EmbodiedBench.git /opt/embodiedbench
 # syntax=docker/dockerfile:1.2
-ARG GITHUB_USERNAME=jeremy-chy
+ARG GITHUB_USERNAME=Natyren
 RUN --mount=type=secret,id=github_token \
     git clone https://${GITHUB_USERNAME}:$(cat /run/secrets/github_token)@github.com/EmbodiedBench/EmbodiedBench.git /opt/embodiedbench
 
@@ -63,47 +63,5 @@ RUN bash -c "source /opt/conda/etc/profile.d/conda.sh && \
 RUN conda env create -f conda_envs/environment_eb-nav.yaml && conda clean --all -y
 
 RUN conda run -n embench_nav pip install -e .
-
-
-############################ 3. Setup Env for EB-Man ############################
-
-RUN conda env create -f conda_envs/environment_eb-man.yaml && conda clean --all -y
-
-RUN conda run -n embench_man pip install -e .
-
-# 1. CoppeliaSim：download to embodiedbench/envs/eb_manipulation, then unzip and move to /opt/CoppeliaSim
-RUN bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate embench_man && \
-             cd embodiedbench/envs/eb_manipulation && \
-             wget https://downloads.coppeliarobotics.com/V4_1_0/CoppeliaSim_Pro_V4_1_0_Ubuntu20_04.tar.xz && \
-             tar -xf CoppeliaSim_Pro_V4_1_0_Ubuntu20_04.tar.xz && \
-             rm CoppeliaSim_Pro_V4_1_0_Ubuntu20_04.tar.xz && \
-             mkdir -p /opt/CoppeliaSim && \
-             mv CoppeliaSim_Pro_V4_1_0_Ubuntu20_04 /opt/CoppeliaSim"
-
-# 2. set CoppeliaSim related env variable
-ENV COPPELIASIM_ROOT=/opt/CoppeliaSim
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/CoppeliaSim
-ENV QT_QPA_PLATFORM_PLUGIN_PATH=/opt/CoppeliaSim
-ENV DISPLAY=:0
-
-# 3. install PyRep：clone and install PyRep
-RUN bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate embench_man && \
-             cd embodiedbench/envs/eb_manipulation && \
-             git clone https://github.com/stepjam/PyRep.git && \
-             cd PyRep && \
-             pip install -r requirements.txt && \
-             pip install -e ."
-
-# 4. install EB-Manipulation as specified in eb_manipulation
-RUN bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate embench_man && \
-             cd embodiedbench/envs/eb_manipulation && \
-             pip install -r requirements.txt && \
-             pip install -e ."
-
-# 5. copy simAddOnScript_PyRep.lua to CoppeliaSim's installing directory
-RUN bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate embench_man && \
-             cd embodiedbench/envs/eb_manipulation && \
-             cp simAddOnScript_PyRep.lua \$COPPELIASIM_ROOT"
-
 
 CMD ["/bin/bash"]
